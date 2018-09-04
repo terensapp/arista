@@ -41,6 +41,8 @@ def syncConfiglet(cvpClient,configletName,configletConfig):
       configlet = cvpClient.api.get_configlet_by_name(configletName)
       configletKey = configlet['key']
       configletCurrentConfig = configlet['config']
+      # For future use to compare date in CVP vs. Git (use this to push to Git)
+      configletCurrentDate = configlet['dateTimeInLongFormat']
       # If it does, check to see if the config is in sync, if not update the config with the one in Git
       if configletConfig == configletCurrentConfig:
         print "Configlet", configletName, "exists and is up to date!"
