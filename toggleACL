@@ -1,0 +1,124 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2014, Arista Networks, Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#  - Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#  - Redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution.
+#  - Neither the name of Arista Networks nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL ARISTA NETWORKS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Toggle ACL
+#
+#    Version 1.0 10/30/2014
+#    Written by: 
+#       Teren Sapp, Arista Networks
+#
+#    Revision history:
+#       1.0 - First revision
+
+
+"""
+   DESCRIPTION
+      Toggle ACL script is used to enable or disable a specific
+      ACL on an interface.
+
+   INSTALLATION
+      In order to install this extension:
+         - copy 'toggleACL' to /mnt/flash
+         - enable the Command API interface:
+
+               management api http-commands
+                  no shutdown
+
+         - change SWITCH_IP, USERNAME and PASSWORD at the top of the
+           script to the ones appropriate for your installation. If
+           running locallty, use '127.0.0.1' for the IP.
+
+   USAGE
+      Toggle ACL can be ran from a bash shell on the switch or remotely
+      by specifying the remote switch's IP address. Toggle ACL requires 4
+      command line arguments to be supplied to run correctly.
+
+     Usage: ./toggleACL [enable|disable] <interface> <acl> [in|out]
+     Example: ./toggleACL enable Ethernet1 block-icmp in
+
+   COMPATIBILITY
+      Version 1.0 has been developed and tested against EOS-4.14.0 and
+      is using the Command API interface. Hence, it should maintain
+      backward compatibility with future EOS releases.
+
+  LIMITATIONS
+      None known.
+"""
+import sys
+from jsonrpclib import Server
+
+#----------------------------------------------------------------
+# Configuration section
+#----------------------------------------------------------------
+SWITCH_IP = '127.0.0.1'
+USERNAME = 'arista'
+PASSWORD = 'arista'
+#----------------------------------------------------------------
+
+def main(argv):
+
+   try:
+      TOGGLEACL = argv[1]
+      INTERFACE = argv[2]
+      ACLNAME = argv[3]
+      ACLDIR = argv[4]
+   except:
+      sys.stderr.write('Usage: ./toggleACL [enable|disable] <interface> <acl> [in|out]')
+      sys.exit(1)
+
+   if TOGGLEACL == 'disable':
+      ACLACTION = 'no '
+   elif TOGGLEACL == 'enable':
+      ACLACTION = ''
+   else:
+      sys.stderr.write('Usage: ./toggleACL [enable|disable] <interface> <acl> [in|out]')
+      sys.exit(1)
+
+   if ACLDIR != 'in' and ACLDIR != 'out':
+      sys.stderr.write('Usage: ./toggleACL [enable|disable] <interface> <acl> [in|out]')
+      sys.exit(1)
+
+   switch = Server( 'http://%s:%s@%s/command-api' % 
+                    ( USERNAME, PASSWORD, SWITCH_IP ) )
+   
+   try:
+      rc = switch.runCmds( 1, [ 'enable',
+                                'configure',
+                                'interface %s' % (INTERFACE), 
+                                '%sip access-group %s %s' % 
+                                (ACLACTION,ACLNAME,ACLDIR) 
+                              ] )
+
+   except:
+      sys.stderr.write('Usage: ./toggleACL [enable|disable] <interface> <acl> [in|out]')
+      sys.exit(1)
+
+
+if __name__ == '__main__':
+   main(sys.argv)
