@@ -4,6 +4,7 @@ import os
 import time
 import shutil
 import urllib3
+import ast
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 DEBUG = 0
@@ -21,7 +22,7 @@ gitBranch = 'master'
 configletPath = ''
 ignoreConfiglets = ['.git','.md']
 # cvpNodes can be a single item or a list of the cluster
-cvpNodes = ['54.193.119.19']
+cvpNodes = ['54.183.233.155']
 cvpUsername = 'arista'
 cvpPassword = 'arista'
 
@@ -41,6 +42,13 @@ while 1:
       print "Cannot connect to CVP waiting 1 minute attempt",attempts
       time.sleep(60)
 
+# Function to determine if string passed is python or just text
+def is_python(code):
+   try:
+       ast.parse(code)
+   except SyntaxError:
+       return False
+   return True
 
 # Function to sync configlet to CVP
 def syncConfiglet(cvpClient,configletName,configletConfig):
@@ -61,6 +69,7 @@ def syncConfiglet(cvpClient,configletName,configletConfig):
           print "Configlet", configletName, "exists and is now up to date"
      
    except:
+      print configletName
       addConfiglet = cvpClient.api.add_configlet(configletName,configletConfig)
       if DEBUG > 4:
         print "Configlet", configletName, "has been added"
@@ -86,7 +95,10 @@ def syncFromGit(cvpClient):
      if configletName not in ignoreConfiglets and not configletName.endswith(tuple(ignoreConfiglets)):
         with open(gitTempPath + configletPath + configletName, 'r') as configletData:
            configletConfig=configletData.read()
-        syncConfiglet(cvpClient,configletName,configletConfig)
+        if not is_python(configletConfig):
+          syncConfiglet(cvpClient,configletName,configletConfig)
+        else:
+          syncConfiglet(cvpClient,configletName,configletConfig)
 
   if os.path.isdir(gitTempPath):
      shutil.rmtree(gitTempPath)
@@ -97,8 +109,20 @@ def syncFromCVP(cvpClient):
   repo = git.Repo(gitTempPath)
 
   for configlet in cvpClient.api.get_configlets()['data']:
+    if configlet['type'] == 'Static':
+      configletData = configlet['config']
+    elif configlet['type'] == 'Builder':
+      configletData = cvpClient.api.get_configlet_builder(configlet['key'])
+      configletData = configletData.get('data')['main_script']
+      configletData = configletData['data']
+    elif configlet['type'] == 'Generated':
+       if DEBUG > 4:
+         print configlet['name'],'skipped for now since it is a generated'
+    else:
+      print configlet['type'],' - ',configlet['name']
+
     file = open(gitTempPath + configlet['name'],"w")
-    file.write(configlet['config'])
+    file.write(configletData)
     file.close()
     repo.index.add([configlet['name']])
 
