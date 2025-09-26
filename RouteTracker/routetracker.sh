@@ -29,7 +29,7 @@ while true; do
         if [ $Count = "$FailureCount" ]; then
           NOW=`/bin/date`
           echo "Host is down at" $NOW >> /mnt/flash/RouteTrack.log
-          logger -p CRIT -t IPSLA "Host $i is up - Changing Routes"
+          logger -p CRIT -t RouteTracker "Host $i is up - Changing Routes"
           FastCli -p15 -c '
           enable
           conf term
@@ -45,7 +45,7 @@ while true; do
         NOW=`/bin/date`
         echo "Host is up at" $NOW >> /mnt/flash/RouteTrack.log
         Count=0
-        logger -p CRIT -t IPSLA "Host $i is down - Changing Routes"
+        logger -p CRIT -t RouteTracker "Host $i is down - Changing Routes"
         FastCli -p15 -c '
         enable
         conf term
